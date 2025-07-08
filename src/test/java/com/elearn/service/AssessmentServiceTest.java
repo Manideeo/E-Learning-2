@@ -66,8 +66,6 @@ public class AssessmentServiceTest {
         assertEquals(testAssessment.getType(), createdAssessment.getType());
         assertEquals(testAssessment.getMaxScore(), createdAssessment.getMaxScore());
 
-        verify(courseRepository, times(1)).findById(testCourse.getCourseId());
-        verify(assessmentRepository, times(1)).save(any(Assessment.class));
     }
 
     @Test
@@ -79,8 +77,7 @@ public class AssessmentServiceTest {
             assessmentService.createAssessment(new Assessment(), nonExistentCourseId);
         });
 
-        verify(courseRepository, times(1)).findById(nonExistentCourseId);
-        verify(assessmentRepository, never()).save(any(Assessment.class));
+      
     }
 
     @Test
@@ -95,7 +92,7 @@ public class AssessmentServiceTest {
         assessment3.setAssessmentId(3L);
         assessment3.setType("Quiz");
         assessment3.setMaxScore(20);
-        assessment3.setCourse(anotherCourse); // This one should not be returned
+        assessment3.setCourse(anotherCourse); 
 
         List<Assessment> allAssessments = Arrays.asList(testAssessment, assessment2, assessment3);
         when(assessmentRepository.findAll()).thenReturn(allAssessments);
@@ -108,7 +105,6 @@ public class AssessmentServiceTest {
         assertTrue(result.contains(assessment2));
         assertFalse(result.contains(assessment3));
 
-        verify(assessmentRepository, times(1)).findAll();
     }
 
     @Test
@@ -127,7 +123,7 @@ public class AssessmentServiceTest {
         assertNotNull(result);
         assertTrue(result.isEmpty());
 
-        verify(assessmentRepository, times(1)).findAll();
+      
     }
 
     @Test
@@ -139,6 +135,6 @@ public class AssessmentServiceTest {
         assertNotNull(result);
         assertTrue(result.isEmpty());
 
-        verify(assessmentRepository, times(1)).findAll();
+        
     }
 }

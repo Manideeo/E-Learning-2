@@ -25,9 +25,9 @@ public class AuthController {
 		Map<String, Object> response = new HashMap<>();
 		response.put("status", "success");
 		response.put("message", "User registered successfully");
-		response.put("token", token); // ✅ Token added to response
+		response.put("token", token); 
 
-		return new ResponseEntity<>(response, HttpStatus.CREATED); // 201 Created
+		return new ResponseEntity<>(response, HttpStatus.CREATED);  
 	}
 
 	@PostMapping("/login")

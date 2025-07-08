@@ -24,7 +24,7 @@ public class Course {
     private User instructor;
 
 
-    // One course -> Many enrollments
+   
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<Enrollment> enrollments;

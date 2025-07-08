@@ -30,7 +30,6 @@ public class AssessmentController {
     }
 
     @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR')")
-
     @GetMapping("/by-course/{courseId}")
     public List<Assessment> getByCourse(@PathVariable Long courseId) {
         return assessmentService.getAssessmentsByCourse(courseId);

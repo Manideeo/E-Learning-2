@@ -18,14 +18,13 @@ public class EnrollmentController {
 	@Autowired
     private EnrollmentService enrollmentService;
 
-    @PostMapping("/enroll")
+    @PostMapping("/enroll/{studentId}/{courseId}")
  
-    public Enrollment enroll(@RequestParam Long studentId, @RequestParam Long courseId) {
+    public Enrollment enroll(@PathVariable Long studentId, @PathVariable Long courseId) {
         return enrollmentService.enrollInCourse(studentId, courseId);
     }
 
-    @GetMapping("/by-student/{studentId}")
-    
+    @GetMapping("/by-student/{studentId}")    
     public List<Enrollment> getByStudent(@PathVariable Long studentId) {
         return enrollmentService.getEnrollmentsByStudent(studentId);
     }
@@ -36,9 +35,9 @@ public class EnrollmentController {
         return enrollmentService.getEnrollmentsByCourse(courseId);
     }
 
-    @PutMapping("/{enrollmentId}/progress")
+    @PutMapping("/{enrollmentId}/progress/{progress}")
    
-    public Enrollment updateProgress(@PathVariable Long enrollmentId, @RequestParam double progress) {
+    public Enrollment updateProgress(@PathVariable Long enrollmentId, @PathVariable double progress) {
         return enrollmentService.updateProgress(enrollmentId, progress);
     }
 }

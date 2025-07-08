@@ -11,7 +11,7 @@ import jakarta.persistence.*;
 
  
 @Entity
-@Table(name = "users") // optional: to avoid reserved word issues
+@Table(name = "users") 
 public class User {
  
     @Id
@@ -33,15 +33,12 @@ public class User {
  
     @Enumerated(EnumType.STRING)
     private Role role;
-    
-     
-    // ---- ENUM ----
+  
     public enum Role {
         STUDENT,
         INSTRUCTOR
     }
  
-    // ---- CONSTRUCTORS ----
     public User() {
     }
  
@@ -53,9 +50,7 @@ public class User {
         this.role = role;
     }
  
-    // ---- GETTERS & SETTERS ----
- 
-    public Long getId() {
+     public Long getId() {
         return id;
     }
  
