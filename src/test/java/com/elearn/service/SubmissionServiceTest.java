@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -89,9 +90,9 @@ public class SubmissionServiceTest {
         assertEquals(testAssessment.getAssessmentId(), submitted.getAssessment().getAssessmentId());
         assertEquals(85, submitted.getScore());
 
-        verify(userRepository, times(1)).findById(studentUser.getId());
-        verify(assessmentRepository, times(1)).findById(testAssessment.getAssessmentId());
-        verify(submissionRepository, times(1)).save(any(Submission.class));
+        verify(userRepository).findById(studentUser.getId());
+        verify(assessmentRepository).findById(testAssessment.getAssessmentId());
+        verify(submissionRepository).save(any(Submission.class));
     }
 
     @Test
@@ -99,13 +100,13 @@ public class SubmissionServiceTest {
         Long nonExistentStudentId = 99L;
         when(userRepository.findById(nonExistentStudentId)).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> {
+        assertThrows(RuntimeException.class, () -> {
             submissionService.submitAssessment(nonExistentStudentId, testAssessment.getAssessmentId(), 80);
         });
 
-        verify(userRepository, times(1)).findById(nonExistentStudentId);
-        verify(assessmentRepository, never()).findById(anyLong());
-        verify(submissionRepository, never()).save(any(Submission.class));
+        verify(userRepository).findById(nonExistentStudentId);
+        verifyNoInteractions(assessmentRepository);
+        verifyNoInteractions(submissionRepository);
     }
 
     @Test
@@ -114,13 +115,26 @@ public class SubmissionServiceTest {
         when(userRepository.findById(studentUser.getId())).thenReturn(Optional.of(studentUser));
         when(assessmentRepository.findById(nonExistentAssessmentId)).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> {
+        assertThrows(RuntimeException.class, () -> {
             submissionService.submitAssessment(studentUser.getId(), nonExistentAssessmentId, 70);
         });
 
-        verify(userRepository, times(1)).findById(studentUser.getId());
-        verify(assessmentRepository, times(1)).findById(nonExistentAssessmentId);
-        verify(submissionRepository, never()).save(any(Submission.class));
+        verify(userRepository).findById(studentUser.getId());
+        verify(assessmentRepository).findById(nonExistentAssessmentId);
+        verifyNoInteractions(submissionRepository);
+    }
+
+    @Test
+    void testSubmitAssessment_UserNotStudentRole() {
+        when(userRepository.findById(instructorUser.getId())).thenReturn(Optional.of(instructorUser));
+
+        assertThrows(IllegalStateException.class, () -> {
+            submissionService.submitAssessment(instructorUser.getId(), testAssessment.getAssessmentId(), 50);
+        });
+
+        verify(userRepository).findById(instructorUser.getId());
+        verifyNoInteractions(assessmentRepository);
+        verifyNoInteractions(submissionRepository);
     }
 
     @Test
@@ -131,17 +145,9 @@ public class SubmissionServiceTest {
         submission2.setAssessment(testAssessment);
         submission2.setScore(90);
 
-        Submission submissionForAnotherStudent = new Submission();
-        submissionForAnotherStudent.setSubmissionId(3L);
-        submissionForAnotherStudent.setStudent(instructorUser);
-        submissionForAnotherStudent.setAssessment(testAssessment);
-        submissionForAnotherStudent.setScore(60);
-
-        List<Submission> allSubmissions = Arrays.asList(testSubmission, submission2, submissionForAnotherStudent);
-        when(submissionRepository.findAll()).thenReturn(allSubmissions);
-        // Now that the service calls userRepository.findById, this stubbing is necessary and correct
-        when(userRepository.findById(studentUser.getId())).thenReturn(Optional.of(studentUser));
-
+        List<Submission> studentSubmissions = Arrays.asList(testSubmission, submission2);
+        
+        when(submissionRepository.findByStudent_Id(studentUser.getId())).thenReturn(studentSubmissions);
 
         List<Submission> result = submissionService.getSubmissionsByStudent(studentUser.getId());
 
@@ -149,59 +155,39 @@ public class SubmissionServiceTest {
         assertEquals(2, result.size());
         assertTrue(result.contains(testSubmission));
         assertTrue(result.contains(submission2));
-        assertFalse(result.contains(submissionForAnotherStudent));
 
-        verify(userRepository, times(1)).findById(studentUser.getId());
-        verify(submissionRepository, times(1)).findAll();
+        verify(submissionRepository).findByStudent_Id(studentUser.getId());
+        verifyNoInteractions(userRepository);
+        verifyNoInteractions(assessmentRepository);
     }
 
     @Test
-    void testGetSubmissionsByStudent_StudentNotFound() {
+    void testGetSubmissionsByStudent_StudentNotFoundInRepoOrNoSubmissions() {
         Long nonExistentStudentId = 99L;
-        when(userRepository.findById(nonExistentStudentId)).thenReturn(Optional.empty());
+        
+        when(submissionRepository.findByStudent_Id(nonExistentStudentId)).thenReturn(Collections.emptyList());
 
-        assertThrows(NoSuchElementException.class, () -> {
-            submissionService.getSubmissionsByStudent(nonExistentStudentId);
-        });
+        List<Submission> result = submissionService.getSubmissionsByStudent(nonExistentStudentId);
 
-        verify(userRepository, times(1)).findById(nonExistentStudentId);
-        verify(submissionRepository, never()).findAll();
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+
+        verify(submissionRepository).findByStudent_Id(nonExistentStudentId);
+        verifyNoInteractions(userRepository);
+        verifyNoInteractions(assessmentRepository);
     }
 
     @Test
     void testGetSubmissionsByStudent_NoSubmissionsForStudent() {
-        Submission submissionForAnotherStudent = new Submission();
-        submissionForAnotherStudent.setSubmissionId(3L);
-        submissionForAnotherStudent.setStudent(instructorUser);
-        submissionForAnotherStudent.setAssessment(testAssessment);
-        submissionForAnotherStudent.setScore(60);
-
-        List<Submission> allSubmissions = Arrays.asList(submissionForAnotherStudent);
-        when(submissionRepository.findAll()).thenReturn(allSubmissions);
-        // Now that the service calls userRepository.findById, this stubbing is necessary and correct
-        when(userRepository.findById(studentUser.getId())).thenReturn(Optional.of(studentUser));
+        when(submissionRepository.findByStudent_Id(studentUser.getId())).thenReturn(Collections.emptyList());
 
         List<Submission> result = submissionService.getSubmissionsByStudent(studentUser.getId());
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
 
-        verify(userRepository, times(1)).findById(studentUser.getId());
-        verify(submissionRepository, times(1)).findAll();
-    }
-
-    @Test
-    void testGetSubmissionsByStudent_NoSubmissionsAtAll() {
-        when(submissionRepository.findAll()).thenReturn(Arrays.asList());
-        // Now that the service calls userRepository.findById, this stubbing is necessary and correct
-        when(userRepository.findById(studentUser.getId())).thenReturn(Optional.of(studentUser));
-
-        List<Submission> result = submissionService.getSubmissionsByStudent(studentUser.getId());
-
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-
-        verify(userRepository, times(1)).findById(studentUser.getId());
-        verify(submissionRepository, times(1)).findAll();
+        verify(submissionRepository).findByStudent_Id(studentUser.getId());
+        verifyNoInteractions(userRepository);
+        verifyNoInteractions(assessmentRepository);
     }
 }

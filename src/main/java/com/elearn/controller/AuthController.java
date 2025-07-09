@@ -20,26 +20,26 @@ public class AuthController {
 
 	@PostMapping("/register")
 	public ResponseEntity<?> register(@RequestBody User user) {
-		String token = authService.register(user); // Generate token
+		String token = authService.register(user); 
 
 		Map<String, Object> response = new HashMap<>();
 		response.put("status", "success");
 		response.put("message", "User registered successfully");
-		response.put("token", token); 
+		 
 
 		return new ResponseEntity<>(response, HttpStatus.CREATED);  
 	}
 
 	@PostMapping("/login")
 	public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-		String token = authService.login(request.getEmail(), request.getPassword()); // Capture token
+		String token = authService.login(request.getEmail(), request.getPassword()); 
 
 		Map<String, Object> response = new HashMap<>();
 		response.put("status", "success");
 		response.put("message", "Login successful");
-		response.put("token", token); // ✅ Token added to response
+		response.put("token", token); 
 
-		return ResponseEntity.ok(response); // 200 OK
+		return ResponseEntity.ok(response); 
 	}
 
 	@Data

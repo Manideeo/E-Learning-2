@@ -30,7 +30,7 @@ public class AuthService {
 
 		}
 
-		return jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+	return jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 	}
 
 	public String login(String email, String password) {

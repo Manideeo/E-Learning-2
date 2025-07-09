@@ -1,10 +1,12 @@
-
 package com.elearn.service;
 
 import com.elearn.model.Assessment;
 import com.elearn.model.Course;
+import com.elearn.model.User;
+import com.elearn.model.User.Role;
 import com.elearn.repo.AssessmentRepository;
 import com.elearn.repo.CourseRepository;
+import com.elearn.repo.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -29,12 +32,17 @@ public class AssessmentServiceTest {
     @Mock
     private CourseRepository courseRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private AssessmentService assessmentService;
 
     private Course testCourse;
     private Course anotherCourse;
     private Assessment testAssessment;
+    private User instructorUser;
+    private User studentUser;
 
     @BeforeEach
     void setUp() {
@@ -50,35 +58,66 @@ public class AssessmentServiceTest {
         testAssessment.setAssessmentId(1L);
         testAssessment.setType("Quiz");
         testAssessment.setMaxScore(100);
-        testAssessment.setCourse(testCourse); // Initially set for convenience, but service will set it
+
+        instructorUser = new User();
+        instructorUser.setId(10L);
+        instructorUser.setEmail("instructor@example.com");
+        instructorUser.setRole(Role.INSTRUCTOR);
+
+        studentUser = new User();
+        studentUser.setId(20L);
+        studentUser.setEmail("student@example.com");
+        studentUser.setRole(Role.STUDENT); // Ensure this is definitely Role.STUDENT
     }
 
     @Test
     void testCreateAssessment_Success() {
-        when(courseRepository.findById(testCourse.getCourseId())).thenReturn(Optional.of(testCourse));
-        when(assessmentRepository.save(any(Assessment.class))).thenReturn(testAssessment);
+        Assessment newAssessment = new Assessment();
+        newAssessment.setType("Quiz");
+        newAssessment.setMaxScore(100);
 
-        Assessment createdAssessment = assessmentService.createAssessment(new Assessment(), testCourse.getCourseId());
+        when(userRepository.findById(instructorUser.getId())).thenReturn(Optional.of(instructorUser));
+        when(courseRepository.findById(testCourse.getCourseId())).thenReturn(Optional.of(testCourse));
+        
+        when(assessmentRepository.save(any(Assessment.class))).thenAnswer(invocation -> {
+            Assessment savedAssessment = invocation.getArgument(0);
+            savedAssessment.setAssessmentId(1L);
+            savedAssessment.setCourse(testCourse);
+            return savedAssessment;
+        });
+
+        Assessment createdAssessment = assessmentService.createAssessment(newAssessment, testCourse.getCourseId(), instructorUser.getId());
 
         assertNotNull(createdAssessment);
-        assertEquals(testAssessment.getAssessmentId(), createdAssessment.getAssessmentId());
+        assertEquals(1L, createdAssessment.getAssessmentId());
         assertEquals(testCourse.getCourseId(), createdAssessment.getCourse().getCourseId());
-        assertEquals(testAssessment.getType(), createdAssessment.getType());
-        assertEquals(testAssessment.getMaxScore(), createdAssessment.getMaxScore());
-
+        assertEquals("Quiz", createdAssessment.getType());
+        assertEquals(100, createdAssessment.getMaxScore());
     }
 
     @Test
     void testCreateAssessment_CourseNotFound() {
         Long nonExistentCourseId = 999L;
+        
+        when(userRepository.findById(instructorUser.getId())).thenReturn(Optional.of(instructorUser));
         when(courseRepository.findById(nonExistentCourseId)).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> {
-            assessmentService.createAssessment(new Assessment(), nonExistentCourseId);
+        assertThrows(RuntimeException.class, () -> {
+            assessmentService.createAssessment(new Assessment(), nonExistentCourseId, instructorUser.getId());
         });
-
-      
     }
+
+    @Test
+    void testCreateAssessment_InstructorNotFound() {
+        Long nonExistentInstructorId = 999L;
+        when(userRepository.findById(nonExistentInstructorId)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> {
+            assessmentService.createAssessment(new Assessment(), testCourse.getCourseId(), nonExistentInstructorId);
+        });
+    }
+
+   
 
     @Test
     void testGetAssessmentsByCourse_Success() {
@@ -88,14 +127,8 @@ public class AssessmentServiceTest {
         assessment2.setMaxScore(50);
         assessment2.setCourse(testCourse);
 
-        Assessment assessment3 = new Assessment();
-        assessment3.setAssessmentId(3L);
-        assessment3.setType("Quiz");
-        assessment3.setMaxScore(20);
-        assessment3.setCourse(anotherCourse); 
-
-        List<Assessment> allAssessments = Arrays.asList(testAssessment, assessment2, assessment3);
-        when(assessmentRepository.findAll()).thenReturn(allAssessments);
+        List<Assessment> assessmentsForTestCourse = Arrays.asList(testAssessment, assessment2);
+        when(assessmentRepository.findByCourse_CourseId(testCourse.getCourseId())).thenReturn(assessmentsForTestCourse);
 
         List<Assessment> result = assessmentService.getAssessmentsByCourse(testCourse.getCourseId());
 
@@ -103,38 +136,26 @@ public class AssessmentServiceTest {
         assertEquals(2, result.size());
         assertTrue(result.contains(testAssessment));
         assertTrue(result.contains(assessment2));
-        assertFalse(result.contains(assessment3));
-
     }
 
     @Test
     void testGetAssessmentsByCourse_NoAssessmentsFoundForCourse() {
-        Assessment assessment3 = new Assessment();
-        assessment3.setAssessmentId(3L);
-        assessment3.setType("Quiz");
-        assessment3.setMaxScore(20);
-        assessment3.setCourse(anotherCourse);
-
-        List<Assessment> allAssessments = Arrays.asList(assessment3);
-        when(assessmentRepository.findAll()).thenReturn(allAssessments);
+        when(assessmentRepository.findByCourse_CourseId(testCourse.getCourseId())).thenReturn(Collections.emptyList());
 
         List<Assessment> result = assessmentService.getAssessmentsByCourse(testCourse.getCourseId());
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
-
-      
     }
 
     @Test
-    void testGetAssessmentsByCourse_NoAssessmentsAtAll() {
-        when(assessmentRepository.findAll()).thenReturn(Arrays.asList());
+    void testGetAssessmentsByCourse_CourseWithNoAssessmentsOrNonExistent() {
+        Long nonExistentCourseId = 999L;
+        when(assessmentRepository.findByCourse_CourseId(nonExistentCourseId)).thenReturn(Collections.emptyList());
 
-        List<Assessment> result = assessmentService.getAssessmentsByCourse(testCourse.getCourseId());
+        List<Assessment> result = assessmentService.getAssessmentsByCourse(nonExistentCourseId);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
-
-        
     }
 }

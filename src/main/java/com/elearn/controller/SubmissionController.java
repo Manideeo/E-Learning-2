@@ -4,6 +4,7 @@ package com.elearn.controller;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,25 +13,45 @@ import com.elearn.service.SubmissionService;
 
 import java.util.List;
 
+//@RestController
+//@RequestMapping("/api/submissions")
+//@RequiredArgsConstructor
+//public class SubmissionController {
+//	@Autowired
+//    private SubmissionService submissionService;
+//
+//    @PreAuthorize("hasRole('STUDENT')")
+//    @PostMapping("/{studentId}/{assessmentId}/{score}")
+//    public Submission submit(@PathVariable Long studentId,
+//                             @PathVariable Long assessmentId,
+//                             @PathVariable int score) {
+//        return submissionService.submitAssessment(studentId, assessmentId, score);
+//    }
+//
+//    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR')")
+//
+//    @GetMapping("/by-student/{studentId}")
+//    public List<Submission> getByStudent(@PathVariable Long studentId) {
+//        return submissionService.getSubmissionsByStudent(studentId);
+//    }
+//}
 @RestController
 @RequestMapping("/api/submissions")
 @RequiredArgsConstructor
 public class SubmissionController {
 	@Autowired
     private SubmissionService submissionService;
-
-    @PreAuthorize("hasRole('STUDENT')")
-    @PostMapping("/{studentId}/{assessmentId}/{score}")
-    public Submission submit(@PathVariable Long studentId,
-                             @PathVariable Long assessmentId,
-                             @PathVariable int score) {
-        return submissionService.submitAssessment(studentId, assessmentId, score);
+ 
+    @PostMapping("/submit/{studentId}/{assessmentId}/{score}")
+    public ResponseEntity<?> submitAssessment(@PathVariable Long studentId,
+    		@PathVariable Long assessmentId,
+    		@PathVariable int score) {
+        Submission submission = submissionService.submitAssessment(studentId, assessmentId, score);
+        return ResponseEntity.ok(submission);
     }
-
-    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR')")
-
+ 
     @GetMapping("/by-student/{studentId}")
-    public List<Submission> getByStudent(@PathVariable Long studentId) {
+    public List<Submission> getSubmissions(@PathVariable Long studentId) {
         return submissionService.getSubmissionsByStudent(studentId);
     }
 }
