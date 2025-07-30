@@ -4,11 +4,17 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
 
-
-@Entity
+import java.util.*
+;@Entity
 public class Assessment {
 
-    @Id
+    public List<Question> getQuestions() {
+		return questions;
+	}
+	public void setQuestions(List<Question> questions) {
+		this.questions = questions;
+	}
+	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long assessmentId;
 
@@ -17,8 +23,12 @@ public class Assessment {
     @JsonIgnore
     private Course course;
 
-    private String type; // "Quiz" or "Assignment"
+   // private String type; // "Quiz" or "Assignment"
+    @OneToMany(mappedBy = "assessment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Question> questions;
+     
     private int maxScore;
+   // private int maxScore;
 	public Long getAssessmentId() {
 		return assessmentId;
 	}
@@ -31,12 +41,7 @@ public class Assessment {
 	public void setCourse(Course course) {
 		this.course = course;
 	}
-	public String getType() {
-		return type;
-	}
-	public void setType(String type) {
-		this.type = type;
-	}
+
 	public int getMaxScore() {
 		return maxScore;
 	}
